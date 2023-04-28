@@ -5,8 +5,10 @@
 FROM ubuntu:20.04
 
 ARG VCS_REF
-ARG GCC_AARCH64=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-aarch64-aarch64-none-elf.tar.xz
-ARG GCC_X86_64=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-x86_64-aarch64-none-elf.tar.xz
+ARG GCC_AARCH64_ARM=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-aarch64-aarch64-none-elf.tar.xz
+ARG GCC_X86_64_ARM=https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/gcc-arm-10.3-2021.07-x86_64-aarch64-none-elf.tar.xz
+ARG GCC_AARCH64_RISCV=https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v12.2.0-3/xpack-riscv-none-elf-gcc-12.2.0-3-linux-arm64.tar.gz
+ARG GCC_X86_64_RISCV=https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v12.2.0-3/xpack-riscv-none-elf-gcc-12.2.0-3-linux-x64.tar.gz
 
 LABEL org.label-schema.vcs-ref=$VCS_REF \
     org.label-schema.vcs-url="https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials"
@@ -18,39 +20,49 @@ COPY Gemfile .
 
 RUN set -ex;                                      \
     tempPkgs='                                    \
-        automake                                  \
-        bison                                     \
-        build-essential                           \
-        flex                                      \
-        git                                       \
-        libtool                                   \
-        ninja-build                               \
-        pkg-config                                \
-        wget                                      \
+    automake                                  \
+    bison                                     \
+    build-essential                           \
+    flex                                      \
+    git                                       \
+    libtool                                   \
+    ninja-build                               \
+    pkg-config                                \
+    wget                                      \
     ';                                            \
     apt-get update;                               \
     apt-get install -q -y --no-install-recommends \
-        $tempPkgs                                 \
-        # persistent packages
-        ca-certificates                           \
-        gdb-multiarch                             \
-        libpixman-1-dev                           \
-        libglib2.0-dev                            \
-        libusb-1.0.0-dev                          \
-        locales                                   \
-        python3                                   \
-        ruby                                      \
-        ruby-dev                                  \
+    $tempPkgs                                 \
+    # persistent packages
+    ca-certificates                           \
+    gdb-multiarch                             \
+    libpixman-1-dev                           \
+    libglib2.0-dev                            \
+    libusb-1.0.0-dev                          \
+    locales                                   \
+    python3                                   \
+    ruby                                      \
+    ruby-dev                                  \
     ;                                             \
     # GCC AArch64 tools
-    if [ "$(uname -m)" = "aarch64" ]; then wget ${GCC_AARCH64}; else wget ${GCC_X86_64}; fi; \
-    tar -xf gcc-arm-10*;                                                                     \
-    cp                                                                                       \
-        gcc-arm-10*/bin/aarch64-none-elf-objdump                                             \
-        gcc-arm-10*/bin/aarch64-none-elf-readelf                                             \
-        gcc-arm-10*/bin/aarch64-none-elf-nm                                                  \
-        /usr/local/bin/;                                                                     \
-    rm -rf gcc-arm-10*;                                                                      \
+    if [ "$(uname -m)" = "aarch64" ]; then wget ${GCC_AARCH64_ARM}; else wget ${GCC_X86_64_ARM}; fi; \
+    tar -xf gcc-arm-10*;                                       \
+    cp                                                         \
+    gcc-arm-10*/bin/aarch64-none-elf-objdump               \
+    gcc-arm-10*/bin/aarch64-none-elf-readelf               \
+    gcc-arm-10*/bin/aarch64-none-elf-nm                    \
+    /usr/local/bin/;                                       \
+    rm -rf gcc-arm-10*;                                    \
+    # GCC RISCV tools
+    if [ "$(uname -m)" = "aarch64" ]; then wget ${GCC_AARCH64_RISCV}; else wget ${GCC_X86_64_RISCV}; fi; \
+    # GCC RISCV tools
+    tar -xf xpack-riscv-none-elf-gcc-12*;                                       \
+    cp                                                     \
+    xpack-riscv-none-elf-gcc-12*/bin/riscv-none-elf-objdump               \
+    xpack-riscv-none-elf-gcc-12*/bin/riscv-none-elf-readelf               \
+    xpack-riscv-none-elf-gcc-12*/bin/riscv-none-elf-nm                    \
+    /usr/local/bin/;                                       \
+    rm -rf xpack-riscv-none-elf-gcc-12*;             \
     # Ruby dependencies
     gem install bundler;                             \
     bundle config set --local without 'development'; \
@@ -59,9 +71,9 @@ RUN set -ex;                                      \
     git clone https://gitlab.com/qemu-project/qemu.git;        \
     cd qemu;                                                   \
     git checkout tags/v6.1.0;                                  \
-    ./configure --target-list=aarch64-softmmu --enable-modules \
-        --enable-tcg-interpreter --enable-debug-tcg            \
-        --python=/usr/bin/python3;                             \
+    ./configure --target-list=aarch64-softmmu,riscv64-softmmu  \
+    --enable-modules --enable-tcg-interpreter              \
+    --enable-debug-tcg --python=/usr/bin/python3;          \
     make -j10;                                                 \
     make install;                                              \
     cd ..;                                                     \

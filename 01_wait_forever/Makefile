@@ -42,6 +42,17 @@ else ifeq ($(BSP),rpi4)
     READELF_BINARY    = aarch64-none-elf-readelf
     LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/raspberrypi
     RUSTC_MISC_ARGS   = -C target-cpu=cortex-a72
+else ifeq ($(BSP),visv2)
+    TARGET            = riscv64gc-unknown-none-elf
+    KERNEL_BIN        = kernel.img
+    QEMU_BINARY       = qemu-system-riscv64
+    QEMU_MACHINE_TYPE = sifive_u
+    QEMU_RELEASE_ARGS = -d in_asm -display none
+    OBJDUMP_BINARY    = riscv-none-elf-objdump
+    NM_BINARY         = riscv-none-elf-nm
+    READELF_BINARY    = riscv-none-elf-readelf
+    LD_SCRIPT_PATH    = $(shell pwd)/src/bsp/visionfive2
+    RUSTC_MISC_ARGS   = -C target-cpu=sifive-u54
 endif
 
 # Export for build.rs.
@@ -77,7 +88,8 @@ RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) \
 FEATURES      = --features bsp_$(BSP)
 COMPILER_ARGS = --target=$(TARGET) \
     $(FEATURES)                    \
-    --release
+    --release   \
+    -v
 
 RUSTC_CMD   = cargo rustc $(COMPILER_ARGS)
 DOC_CMD     = cargo doc $(COMPILER_ARGS)
@@ -94,7 +106,7 @@ EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 DOCKER_CMD          = docker run -t --rm -v $(shell pwd):/work/tutorial -w /work/tutorial
 DOCKER_CMD_INTERACT = $(DOCKER_CMD) -i
 
-# DOCKER_IMAGE defined in include file (see top of this file).
+# DOCKER_IMAGE defined in include file (make objdumphis file).
 DOCKER_QEMU  = $(DOCKER_CMD_INTERACT) $(DOCKER_IMAGE)
 DOCKER_TOOLS = $(DOCKER_CMD) $(DOCKER_IMAGE)
 
